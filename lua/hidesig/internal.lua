@@ -76,11 +76,21 @@ function hidesig.highlightLines(bufnr, range, tree, lang, opacity)
   vim.api.nvim_buf_clear_namespace(bufnr, namespace, startRow, endRow)
 
   for _, captures in parsedQuery:iter_matches(rootNode, bufnr, startRow, endRow) do
-    local sigBlock = captures[2] -- capture @sorbet
+    for id, node in pairs(captures) do
+      local name = parsedQuery.captures[id]
 
-    if sigBlock ~= nil and not sigBlock:has_error() then
-      for rootChildNode in sigBlock:iter_children() do
-        hidesig.traverseNode(bufnr, rootChildNode, opacity)
+      -- Handle sig and type_alias blocks
+      if name == "sorbet" and not node:has_error() then
+        for rootChildNode in node:iter_children() do
+          hidesig.traverseNode(bufnr, rootChildNode, opacity)
+        end
+      end
+
+      -- Handle T.let expressions - only dim specific parts
+      if name == "t_receiver" or name == "t_let" or
+         name == "t_let_comma" or name == "t_let_type" or
+         name == "t_let_lparen" or name == "t_let_rparen" then
+        hidesig.traverseNode(bufnr, node, opacity)
       end
     end
   end
